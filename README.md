@@ -1,4 +1,3 @@
-"""
 # Personalized Fitness Coach
 
 A Raspberry Pi-based system that analyzes workout form using camera vision and an MPU6050 motion sensor,
@@ -107,4 +106,3 @@ provides real-time feedback, and counts repetitions.
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
-"""
