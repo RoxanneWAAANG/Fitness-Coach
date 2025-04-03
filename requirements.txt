@@ -2,6 +2,8 @@ sudo apt install python3-pip python3-opencv
 pip3 install RPi.GPIO RPLCD smbus2 numpy pandas scikit-learn
 pip3 install tflite-runtime
 pip3 install matplotlib seaborn requests
+pip install mpu6050-raspberrypi
+pip install smbus
 
 pip install torch torchvision torchaudio
 

@@ -12,8 +12,8 @@ from model_trainer import ModelTrainer
 
 def main():
     parser = argparse.ArgumentParser(description="Train models on collected fitness data")
-    parser.add_argument("--exercise", type=str, help="Exercise type to train on (e.g., squat, pushup)")
-    parser.add_argument("--model", choices=["random_forest", "pytorch", "unet"], 
+    parser.add_argument("--exercise", type=str, help="Exercise type to train on (e.g., squat, pushup, bicep_curl)")
+    parser.add_argument("--model", choices=["random_forest", "pytorch"], 
                         default="random_forest", help="Model type to train")
     parser.add_argument("--data-dir", type=str, default="collected_data", 
                         help="Directory containing collected data")
@@ -83,8 +83,6 @@ def main():
                 result = trainer.train_sklearn_model(args.exercise)
             elif args.model == "pytorch":
                 result = trainer.train_pytorch_model(args.exercise)
-            elif args.model == "unet":
-                result = trainer.train_unet_model(args.exercise)
             
             # Show results
             if result:
