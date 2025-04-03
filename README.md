@@ -1,108 +1,120 @@
 # Personalized Fitness Coach
 
-A Raspberry Pi-based system that analyzes workout form using camera vision and an MPU6050 motion sensor,
-provides real-time feedback, and counts repetitions.
+A Raspberry Pi-based system that collects fitness data using a camera and MPU6050 sensor, evaluates exercise form using machine learning models, and provides real-time feedback on an LCD display.
 
-## Project Requirements
+---
 
-- Raspberry Pi 3 or 4
-- Camera module
-- MPU6050 accelerometer/gyroscope sensor
-- I2C LCD display
-- 2 push buttons
-- Servo motor
-- RGB LEDs
-- Jumper wires and resistors
+## Project Features
+
+- Pose estimation with the MoveNet TFLite model
+- Motion tracking using MPU6050 (accelerometer + gyroscope)
+- Form quality classification using PyTorch or Random Forest models
+- CLI interface for interaction and feedback
+- LCD output for real-time guidance and feedback
+
+---
+
+## Requirements
+
+### Hardware
+- Raspberry Pi 4
+- Raspberry Pi Camera
+- MPU6050 sensor (I2C address: `0x53`)
+- I2C LCD display (I2C address: `0x27`)
+- Jumper wires, breadboard
+
+### Software
+- Python 3
+- tflite-runtime
+- OpenCV
+- PyTorch
+- scikit-learn
+- pandas, numpy
+- RPLCD
+- Picamera2
+
+---
 
 ## Installation
 
-1. Clone this repository:
+1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/fitness-coach.git
-   cd fitness-coach
+   git clone https://github.com/RoxanneWAAANG/Fitness-Coach.git
+   cd Fitness-Coach
    ```
 
-2. Install required dependencies:
+2. Install dependencies:
    ```bash
    sudo apt update
-   sudo apt install python3-pip python3-opencv
-   pip3 install RPi.GPIO RPLCD smbus2 tflite-runtime opencv-python numpy
+   sudo apt install python3-pip libatlas-base-dev libopenblas-dev
+   pip3 install numpy pandas torch torchvision opencv-python scikit-learn RPLCD smbus2 tflite-runtime
    ```
 
-3. Download the MoveNet model:
+3. Enable I2C and camera:
+   ```bash
+   sudo raspi-config
+   # Enable I2C under Interfacing Options
+   # Enable Camera under Interface Options
+   ```
+
+4. Download the MoveNet model:
+
+  - Place it in the models/ folder (e.g., models/movenet.tflite)
+  - Refer to: https://www.tensorflow.org/hub/tutorials/movenet
+
    ```bash
    mkdir -p models
-   # Download model - see https://www.tensorflow.org/hub/tutorials/movenet
-   # or use a pre-downloaded model
+   wget -O models/movenet.tflite https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite
+
    ```
 
-## Hardware Setup
-
-### Wiring Diagram
-- See `wiring_diagram.png` for the complete circuit diagram
-
-### Main Connections:
-- LCD Display: 
-  - VCC → 5V
-  - GND → GND
-  - SDA → GPIO2 (SDA)
-  - SCL → GPIO3 (SCL)
-
-- MPU6050:
-  - VCC → 3.3V
-  - GND → GND
-  - SDA → GPIO2 (SDA)
-  - SCL → GPIO3 (SCL)
-
-- Buttons:
-  - Button 1 → GPIO17 (with 10kΩ pull-down resistor)
-  - Button 2 → GPIO27 (with 10kΩ pull-down resistor)
-
-- RGB LEDs:
-  - Red → GPIO16 (with 220Ω resistor)
-  - Green → GPIO20 (with 220Ω resistor)
-  - Blue → GPIO21 (with 220Ω resistor)
-
-- Servo Motor:
-  - Signal → GPIO18
-  - VCC → 5V
-  - GND → GND
-
-- Camera:
-  - Connect to the dedicated camera port on the Raspberry Pi
+---
 
 ## Usage
 
-1. Run the main application:
-   ```bash
-   python3 main.py
-   ```
+### 1. Collect Training Data
+Run the data collector to gather pose and motion data:
+```bash
+python3 multi_collector.py
+```
+Follow prompts to select an exercise (e.g., squat, pushup, bicep curl) and begin collecting labeled session data.
 
-2. Follow the on-screen instructions on the LCD display:
-   - Button 1: Navigate through menu options
-   - Button 2: Select/confirm
+### 2. Train Model
+Train a classification model for form quality:
+```bash
+python3 model_trainer.py --exercise pushup --model random_forest
+# or
+python3 model_trainer.py --exercise squat --model pytorch
+```
+Trained models will be saved in the `models/` directory.
 
-3. Available exercise modes:
-   - Squat
-   - Pushup
-   - Bicep Curl
+### 3. Run Real-Time Feedback System
+Launch the CLI interface for real-time analysis:
+```bash
+python3 fitness_coach_cli.py
+```
+LCD will guide you through the selected exercise and show whether your form is correct.
 
-## System Components
+---
 
-- **main.py**: Main application that coordinates all components
-- **hardware_controller.py**: Controls LCD, buttons, LEDs, and servo
-- **mpu6050_handler.py**: Interfaces with the MPU6050 sensor
-- **camera_handler.py**: Manages camera operations
-- **pose_detector.py**: Performs pose estimation using TensorFlow Lite
-- **exercise_analyzer.py**: Analyzes exercise form and counts repetitions
-- **ui_manager.py**: Manages the user interface on the LCD
+## Project Structure
+
+- `multi_collector.py` – Captures pose + sensor data for training
+- `model_trainer.py` – Trains classifiers (Random Forest / PyTorch)
+- `fitness_coach_cli.py` – Main app for real-time form analysis
+- `models/` – Contains TFLite pose model and trained classifiers
+- `collected_data/` – Stores labeled pose and sensor datasets
+
+---
 
 ## Troubleshooting
 
-- Ensure I2C is enabled: `sudo raspi-config` → Interfacing Options → I2C → Enable
-- Check camera connection: `raspistill -o test.jpg`
-- Verify MPU6050 connection: `sudo i2cdetect -y 1`
-- If model loading fails, provide a test model or use the demo mode
+- **LCD not working**: Ensure correct I2C address and wiring
+- **MPU6050 not detected**: Run `sudo i2cdetect -y 1` and verify it's at address `0x53`
+- **Hardware error**: Test with `python utils/test_hardware.py`
+- **Model loading fails**: Check file paths and naming in `fitness_coach_cli.py`
+
+---
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License – see the LICENSE file for full details.

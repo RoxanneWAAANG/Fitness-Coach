@@ -10,4 +10,8 @@ pip install picamera2
 pip3 install torch torchvision torchaudio --break-system-packages
 sudo pip3 install RPLCD --break-system-packages
 
+tflite_runtime
+sudo apt install python3-picamera2
 
+mkdir -p models
+wget -O models/movenet.tflite https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite
