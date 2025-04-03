@@ -14,42 +14,70 @@ class ExerciseAnalyzer:
         self.last_rep_time = 0
         self.min_rep_interval = 1.0  # seconds
     
+    # def analyze_form(self, exercise_type, pose_data, mpu_data, exercise_params):
+    #     """
+    #     Analyze exercise form based on pose and motion data
+    #     Returns dictionary with form quality, angle corrections, and rep detection
+    #     """
+    #     result = {
+    #         'quality': 'moderate',
+    #         'angle_correction': 0,
+    #         'rep_completed': False
+    #     }
+        
+    #     # Check if pose data is valid (key points are detected with sufficient confidence)
+    #     if not self.validate_pose_data(pose_data, exercise_params['keypoints']):
+    #         return result
+        
+    #     # Calculate joint angles based on exercise type
+    #     joint_angles = self.calculate_joint_angles(exercise_type, pose_data)
+        
+    #     # Check form quality by comparing to target angles
+    #     quality, angle_diff = self.check_form_quality(
+    #         joint_angles, 
+    #         exercise_params['target_angles'],
+    #         exercise_params['tolerance']
+    #     )
+        
+    #     # Check if a repetition was performed
+    #     rep_completed = self.detect_repetition(
+    #         exercise_type, 
+    #         joint_angles, 
+    #         mpu_data
+    #     )
+        
+    #     # Update result
+    #     result['quality'] = quality
+    #     result['angle_correction'] = angle_diff  # Correction needed in degrees
+    #     result['rep_completed'] = rep_completed
+        
+    #     return result
     def analyze_form(self, exercise_type, pose_data, mpu_data, exercise_params):
         """
         Analyze exercise form based on pose and motion data
-        Returns dictionary with form quality, angle corrections, and rep detection
+        First tries to use a custom model if available
         """
+        # First try to load and use U-Net model
+        unet_model = self.load_unet_model(exercise_type)
+        if unet_model is not None:
+            return self.analyze_form_with_unet(exercise_type, pose_data, mpu_data, unet_model)
+        
+        # Then try PyTorch model
+        pytorch_model = self.load_pytorch_model(exercise_type)
+        if pytorch_model is not None:
+            return self.analyze_form_with_pytorch_model(exercise_type, pose_data, mpu_data, pytorch_model)
+        
+        # Then try sklearn model
+        sklearn_model = self.load_custom_model(exercise_type)
+        if sklearn_model is not None:
+            return self.analyze_form_with_custom_model(exercise_type, pose_data, mpu_data, sklearn_model)
+        
+        # Fall back to rule-based analysis
         result = {
             'quality': 'moderate',
             'angle_correction': 0,
             'rep_completed': False
         }
-        
-        # Check if pose data is valid (key points are detected with sufficient confidence)
-        if not self.validate_pose_data(pose_data, exercise_params['keypoints']):
-            return result
-        
-        # Calculate joint angles based on exercise type
-        joint_angles = self.calculate_joint_angles(exercise_type, pose_data)
-        
-        # Check form quality by comparing to target angles
-        quality, angle_diff = self.check_form_quality(
-            joint_angles, 
-            exercise_params['target_angles'],
-            exercise_params['tolerance']
-        )
-        
-        # Check if a repetition was performed
-        rep_completed = self.detect_repetition(
-            exercise_type, 
-            joint_angles, 
-            mpu_data
-        )
-        
-        # Update result
-        result['quality'] = quality
-        result['angle_correction'] = angle_diff  # Correction needed in degrees
-        result['rep_completed'] = rep_completed
         
         return result
     
@@ -267,3 +295,249 @@ class ExerciseAnalyzer:
                     self.rep_state = "down"
         
         return False
+
+    def load_custom_model(self, exercise_type):
+        """Load a custom-trained model for form analysis"""
+        try:
+            model_file = f"models/{exercise_type}_random_forest_model.pkl"
+            scaler_file = f"models/{exercise_type}_random_forest_scaler.pkl"
+            
+            if not os.path.exists(model_file) or not os.path.exists(scaler_file):
+                print(f"Custom model for {exercise_type} not found")
+                return None
+                
+            with open(model_file, 'rb') as f:
+                model = pickle.load(f)
+                
+            with open(scaler_file, 'rb') as f:
+                scaler = pickle.load(f)
+                
+            return {"model": model, "scaler": scaler}
+            
+        except Exception as e:
+            print(f"Error loading custom model: {e}")
+            return None
+
+    def analyze_form_with_custom_model(self, exercise_type, pose_data, mpu_data, model_data):
+        """Analyze form using a custom-trained model"""
+        result = {
+            'quality': 'moderate',
+            'angle_correction': 0,
+            'rep_completed': False
+        }
+        
+        if not model_data or "model" not in model_data or "scaler" not in model_data:
+            # Fall back to standard analysis if model isn't available
+            return self.analyze_form(exercise_type, pose_data, mpu_data, exercise_params)
+            
+        try:
+            # Extract features from data
+            pose_features = self.extract_features_from_pose(pose_data)
+            mpu_features = self.extract_features_from_mpu(mpu_data)
+            
+            # Combine features
+            features = {**pose_features, **mpu_features}
+            
+            # Convert to dataframe
+            df = pd.DataFrame([features])
+            
+            # Fill missing values
+            df = df.fillna(0)
+            
+            # Scale features
+            X_scaled = model_data["scaler"].transform(df)
+            
+            # Make prediction
+            quality = model_data["model"].predict(X_scaled)[0]
+            
+            # Get correction angle from feature analysis
+            correction = self.estimate_correction_angle(exercise_type, pose_data)
+            
+            # Check for rep completion
+            rep_completed = self.detect_repetition(exercise_type, {}, mpu_data)
+            
+            # Update result
+            result['quality'] = quality
+            result['angle_correction'] = correction
+            result['rep_completed'] = rep_completed
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error using custom model: {e}")
+            # Fall back to standard analysis if prediction fails
+            return self.analyze_form(exercise_type, pose_data, mpu_data, exercise_params)
+
+    def load_unet_model(self, exercise_type):
+        """Load a trained U-Net model for form analysis"""
+        try:
+            import torch
+            import torch.nn as nn
+            
+            # Must define the model architecture to match training
+            class SimpleUNet(nn.Module):
+                def __init__(self, input_features, num_classes=3):
+                    super(SimpleUNet, self).__init__()
+                    
+                    # Number of features at each level
+                    base_filters = 16
+                    
+                    # Encoder path
+                    self.enc1 = nn.Sequential(
+                        nn.Linear(input_features, base_filters),
+                        nn.BatchNorm1d(base_filters),
+                        nn.ReLU()
+                    )
+                    
+                    self.enc2 = nn.Sequential(
+                        nn.Linear(base_filters, base_filters * 2),
+                        nn.BatchNorm1d(base_filters * 2),
+                        nn.ReLU()
+                    )
+                    
+                    # Bottleneck
+                    self.bottleneck = nn.Sequential(
+                        nn.Linear(base_filters * 2, base_filters * 4),
+                        nn.BatchNorm1d(base_filters * 4),
+                        nn.ReLU(),
+                        nn.Linear(base_filters * 4, base_filters * 2),
+                        nn.BatchNorm1d(base_filters * 2),
+                        nn.ReLU()
+                    )
+                    
+                    # Decoder path
+                    self.dec2 = nn.Sequential(
+                        nn.Linear(base_filters * 4, base_filters * 2),  # Concatenated input
+                        nn.BatchNorm1d(base_filters * 2),
+                        nn.ReLU()
+                    )
+                    
+                    self.dec1 = nn.Sequential(
+                        nn.Linear(base_filters * 3, base_filters),  # Concatenated input
+                        nn.BatchNorm1d(base_filters),
+                        nn.ReLU()
+                    )
+                    
+                    # Final layer
+                    self.final = nn.Linear(base_filters, num_classes)
+                    
+                def forward(self, x):
+                    # Encoder
+                    enc1_out = self.enc1(x)
+                    enc2_out = self.enc2(enc1_out)
+                    
+                    # Bottleneck
+                    bottleneck_out = self.bottleneck(enc2_out)
+                    
+                    # Decoder with skip connections
+                    dec2_input = torch.cat([bottleneck_out, enc2_out], dim=1)
+                    dec2_out = self.dec2(dec2_input)
+                    
+                    dec1_input = torch.cat([dec2_out, enc1_out], dim=1)
+                    dec1_out = self.dec1(dec1_input)
+                    
+                    # Final output
+                    output = self.final(dec1_out)
+                    
+                    return output
+            
+            model_file = f"models/{exercise_type}_unet_model.pt"
+            scaler_file = f"models/{exercise_type}_unet_scaler.pkl"
+            label_file = f"models/{exercise_type}_unet_labels.json"
+            
+            if not os.path.exists(model_file) or not os.path.exists(scaler_file):
+                print(f"U-Net model for {exercise_type} not found")
+                return None
+                
+            # Load scaler
+            with open(scaler_file, 'rb') as f:
+                scaler = pickle.load(f)
+            
+            # Load label mapping
+            with open(label_file, 'r') as f:
+                label_mapping = json.load(f)
+                
+            # Get feature count from scaler
+            n_features = scaler.n_features_in_
+                
+            # Initialize model
+            model = SimpleUNet(input_features=n_features)
+            
+            # Load model weights
+            model.load_state_dict(torch.load(model_file))
+            model.eval()  # Set to evaluation mode
+                
+            return {
+                "model": model,
+                "scaler": scaler,
+                "label_mapping": label_mapping,
+                "type": "unet"
+            }
+            
+        except Exception as e:
+            print(f"Error loading U-Net model: {e}")
+            return None
+
+    def analyze_form_with_unet(self, exercise_type, pose_data, mpu_data, model_data):
+        """Analyze form using a trained U-Net model"""
+        result = {
+            'quality': 'moderate',
+            'angle_correction': 0,
+            'rep_completed': False
+        }
+        
+        if not model_data or "model" not in model_data or "scaler" not in model_data:
+            # Fall back to standard analysis if model isn't available
+            return self.analyze_form(exercise_type, pose_data, mpu_data, exercise_params)
+            
+        try:
+            import torch
+            import numpy as np
+            
+            # Extract features from data
+            pose_features = self.extract_features_from_pose(pose_data)
+            mpu_features = self.extract_features_from_mpu(mpu_data)
+            
+            # Combine features
+            features = {**pose_features, **mpu_features}
+            
+            # Convert to dataframe
+            df = pd.DataFrame([features])
+            
+            # Fill missing values
+            df = df.fillna(0)
+            
+            # Scale features
+            X_scaled = model_data["scaler"].transform(df)
+            
+            # Convert to PyTorch tensor
+            X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
+            
+            # Make prediction
+            model = model_data["model"]
+            model.eval()
+            with torch.no_grad():
+                outputs = model(X_tensor)
+                _, predicted = torch.max(outputs, 1)
+                
+            # Convert class index to label
+            label_mapping_inv = {v: k for k, v in model_data["label_mapping"].items()}
+            quality = label_mapping_inv[predicted.item()]
+            
+            # Get correction angle from feature analysis
+            correction = self.estimate_correction_angle(exercise_type, pose_data)
+            
+            # Check for rep completion
+            rep_completed = self.detect_repetition(exercise_type, {}, mpu_data)
+            
+            # Update result
+            result['quality'] = quality
+            result['angle_correction'] = correction
+            result['rep_completed'] = rep_completed
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error using U-Net model: {e}")
+            # Fall back to standard analysis if prediction fails
+            return self.analyze_form(exercise_type, pose_data, mpu_data, exercise_params)

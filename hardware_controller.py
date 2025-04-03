@@ -3,7 +3,6 @@ Controls all hardware components including LCD, buttons, LEDs, and servo
 """
 import time
 import RPi.GPIO as GPIO
-from RPLCD.i2c import CharLCD
 
 class HardwareController:
     def __init__(self, btn_navigate, btn_select, red_led, green_led, blue_led, servo_pin):
@@ -32,8 +31,45 @@ class HardwareController:
         
         # Initialize LCD
         # Note: I2C address may need to be adjusted for your specific LCD
-        self.lcd = CharLCD('PCF8574', 0x27, cols=16, rows=2)
+        try:
+            from RPLCD.i2c import CharLCD
+            print("Attempting to initialize LCD with default address 0x27...")
+            try:
+                self.lcd = CharLCD('PCF8574', 0x27, cols=16, rows=2)
+                print("LCD initialized at address 0x27")
+            except Exception as e:
+                print(f"Failed with address 0x27: {e}")
+                print("Trying alternate address 0x3F...")
+                try:
+                    self.lcd = CharLCD('PCF8574', 0x3F, cols=16, rows=2)
+                    print("LCD initialized at address 0x3F")
+                except Exception as e:
+                    print(f"Failed with alternate address: {e}")
+                    print("Creating dummy LCD object")
+                    self.lcd = self._create_dummy_lcd()
+        except ImportError:
+            print("RPLCD library not available, creating dummy LCD")
+            self.lcd = self._create_dummy_lcd()
+            
         self.lcd.clear()
+    
+    def _create_dummy_lcd(self):
+        """Create a dummy LCD object for testing"""
+        class DummyLCD:
+            def __init__(self):
+                self.cursor_pos = (0, 0)
+                print("Dummy LCD created")
+                
+            def clear(self):
+                print("LCD: CLEAR")
+                
+            def write_string(self, text):
+                print(f"LCD: {text}")
+                
+            def get_line(self, line_num):
+                return ""
+        
+        return DummyLCD()
     
     def set_led(self, led_pin, state):
         """Set LED state (True for on, False for off)"""
