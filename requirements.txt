@@ -4,9 +4,10 @@ pip3 install tflite-runtime
 pip3 install matplotlib seaborn requests
 pip install mpu6050-raspberrypi
 pip install smbus
+pip install picamera2
 
-pip install torch torchvision torchaudio
 
-mkdir -p models
-cd models
-wget https://tfhub.dev/google/movenet/singlepose/lightning/4 -O movenet_lightning.tflite
+pip3 install torch torchvision torchaudio --break-system-packages
+sudo pip3 install RPLCD --break-system-packages
+
+

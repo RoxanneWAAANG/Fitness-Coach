@@ -1,0 +1,21 @@
+=== Training started at 2025-04-02T22:42:02.638352 ===
+Exercise: squat
+Model type: pytorch
+Data directory: collected_data
+Models directory: models
+Log file: training_logs/squat_pytorch_20250402_224202.log
+============================================================
+Loaded 574 training examples
+Epoch [10/50], Loss: 1.0097
+Epoch [20/50], Loss: 1.0056
+Epoch [30/50], Loss: 1.0031
+Epoch [40/50], Loss: 1.0022
+Epoch [50/50], Loss: 0.9960
+Test Accuracy: 0.4348
+Model saved to models/squat_pytorch_model.pt
+
+=== Training Results ===
+Accuracy: 0.43478260869565216
+Features used: 25
+============================================================
+Training completed successfully!

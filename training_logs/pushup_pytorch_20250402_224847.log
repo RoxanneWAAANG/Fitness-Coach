@@ -1,0 +1,21 @@
+=== Training started at 2025-04-02T22:48:47.192501 ===
+Exercise: pushup
+Model type: pytorch
+Data directory: collected_data
+Models directory: models
+Log file: training_logs/pushup_pytorch_20250402_224847.log
+============================================================
+Loaded 574 training examples
+Epoch [10/50], Loss: 0.0595
+Epoch [20/50], Loss: 0.0423
+Epoch [30/50], Loss: 0.0343
+Epoch [40/50], Loss: 0.0437
+Epoch [50/50], Loss: 0.0240
+Test Accuracy: 0.9913
+Model saved to models/pushup_pytorch_model.pt
+
+=== Training Results ===
+Accuracy: 0.991304347826087
+Features used: 25
+============================================================
+Training completed successfully!

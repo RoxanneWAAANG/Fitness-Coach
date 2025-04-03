@@ -1,0 +1,21 @@
+=== Training started at 2025-04-02T22:51:45.013139 ===
+Exercise: bicep_curl
+Model type: pytorch
+Data directory: collected_data
+Models directory: models
+Log file: training_logs/bicep_curl_pytorch_20250402_225145.log
+============================================================
+Loaded 573 training examples
+Epoch [10/50], Loss: 0.0503
+Epoch [20/50], Loss: 0.0429
+Epoch [30/50], Loss: 0.0314
+Epoch [40/50], Loss: 0.0296
+Epoch [50/50], Loss: 0.0261
+Test Accuracy: 1.0000
+Model saved to models/bicep_curl_pytorch_model.pt
+
+=== Training Results ===
+Accuracy: 1.0
+Features used: 25
+============================================================
+Training completed successfully!

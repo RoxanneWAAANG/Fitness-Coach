@@ -1,0 +1,27 @@
+=== Training started at 2025-04-02T22:52:16.976662 ===
+Exercise: bicep_curl
+Model type: random_forest
+Data directory: collected_data
+Models directory: models
+Log file: training_logs/bicep_curl_random_forest_20250402_225216.log
+============================================================
+Loaded 573 training examples
+Model accuracy: 1.0000
+Classification report:
+              precision    recall  f1-score   support
+
+        good       1.00      1.00      1.00        33
+    moderate       1.00      1.00      1.00        30
+        poor       1.00      1.00      1.00        52
+
+    accuracy                           1.00       115
+   macro avg       1.00      1.00      1.00       115
+weighted avg       1.00      1.00      1.00       115
+
+Model saved to models/bicep_curl_random_forest_model.pkl
+
+=== Training Results ===
+Accuracy: 1.0
+Features used: 25
+============================================================
+Training completed successfully!
