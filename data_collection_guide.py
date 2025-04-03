@@ -17,7 +17,7 @@ import json
 import datetime
 import pandas as pd
 
-def simulate_exercise_data(exercise_type, duration=30, frequency=10):
+def simulate_exercise_data(exercise_type, duration=30, frequency=10, user_info=None):
     """
     Simulate an exercise session with fake data for demonstration
     
@@ -25,6 +25,7 @@ def simulate_exercise_data(exercise_type, duration=30, frequency=10):
         exercise_type: Type of exercise (e.g., 'squat', 'pushup')
         duration: Duration of the simulated exercise in seconds
         frequency: How many data points to generate per second
+        user_info: Dictionary containing user information (height, weight, experience)
     """
     # Initialize data collector
     collector = DataCollector(data_dir="collected_data")
@@ -34,12 +35,13 @@ def simulate_exercise_data(exercise_type, duration=30, frequency=10):
     os.makedirs(os.path.join(collector.data_dir, "mpu_data"), exist_ok=True)
     os.makedirs(os.path.join(collector.data_dir, "labeled_data"), exist_ok=True)
     
-    # Add user information (optional)
-    user_info = {
-        "height_cm": 168,
-        "weight_kg": 51,
-        "experience": "intermediate"
-    }
+    # If no user info provided, use default values
+    if user_info is None:
+        user_info = {
+            "height_cm": 170,
+            "weight_kg": 70,
+            "experience": "beginner"
+        }
     
     # Start a new session
     session_id = collector.start_session(exercise_type, user_info)
@@ -295,6 +297,72 @@ def generate_pose_data(exercise_type, phase):
     
     return modified_pose
 
+def get_user_info():
+    """
+    Collect user information through an interactive menu
+    
+    Returns:
+        Dictionary with user height, weight, and experience level
+    """
+    print("\n===== User Information =====")
+    
+    # Get height with validation
+    while True:
+        height_input = input("Enter your height in cm (e.g., 170): ")
+        try:
+            height = float(height_input)
+            if 100 <= height <= 250:
+                break
+            else:
+                print("Please enter a valid height between 100-250 cm.")
+        except ValueError:
+            print("Please enter a valid number.")
+    
+    # Get weight with validation
+    while True:
+        weight_input = input("Enter your weight in kg (e.g., 70): ")
+        try:
+            weight = float(weight_input)
+            if 30 <= weight <= 200:
+                break
+            else:
+                print("Please enter a valid weight between 30-200 kg.")
+        except ValueError:
+            print("Please enter a valid number.")
+    
+    # Get experience level
+    print("\nExperience level:")
+    print("1. Beginner")
+    print("2. Intermediate")
+    print("3. Advanced")
+    
+    while True:
+        experience_choice = input("Select your experience level (1-3): ")
+        if experience_choice == '1':
+            experience = "beginner"
+            break
+        elif experience_choice == '2':
+            experience = "intermediate"
+            break
+        elif experience_choice == '3':
+            experience = "advanced"
+            break
+        else:
+            print("Please select a valid option (1-3).")
+    
+    user_info = {
+        "height_cm": height,
+        "weight_kg": weight,
+        "experience": experience
+    }
+    
+    print("\nUser information recorded:")
+    print(f"Height: {height} cm")
+    print(f"Weight: {weight} kg")
+    print(f"Experience: {experience}")
+    
+    return user_info
+
 def main():
     """Main function to demonstrate data collection"""
     print("Data Collection Guide")
@@ -314,11 +382,14 @@ def main():
     exercise_type = exercise_map.get(choice, 'squat')
     duration = int(input("Duration in seconds (default: 30): ") or "30")
     
+    # Get user information
+    user_info = get_user_info()
+    
     print(f"\nSimulating {exercise_type} exercise for {duration} seconds...")
-    simulate_exercise_data(exercise_type, duration)
+    simulate_exercise_data(exercise_type, duration, user_info=user_info)
     
     print("\nData Collection Complete!")
-    print("""
+    print(f"""
 Next steps:
 1. Use the collected data to train a model:
    python model_trainer.py --exercise={exercise_type}
