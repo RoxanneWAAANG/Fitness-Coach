@@ -29,9 +29,9 @@ def read_mpu6050():
 # Load PyTorch models
 models = {}
 model_paths = {
-    "bicep_curl": "/home/ruoxinwang/aipi590/Fitness_Coach/Fitness-Coach/models/bicep_curl_pytorch_model.pt",
-    "pushup": "/home/ruoxinwang/aipi590/Fitness_Coach/Fitness-Coach/models/pushup_pytorch_model.pt",
-    "squat": "/home/ruoxinwang/aipi590/Fitness_Coach/Fitness-Coach/models/squat_pytorch_model.pt",
+    "bicep_curl": "models/bicep_curl_pytorch_model.pt",
+    "pushup": "models/pushup_pytorch_model.pt",
+    "squat": "models/squat_pytorch_model.pt",
 }
 
 # Label mapping
