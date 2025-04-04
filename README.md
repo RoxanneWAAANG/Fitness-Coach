@@ -73,8 +73,11 @@ The data is organized into:
 - `collected_data/image_data/`: Captured images
 - `collected_data/labeled_data/`: Processed data ready for training
 
+To view data, use `python utils/data_viewer.py`.
+
 ## Model Training
 
+### How to Run
 Train form quality assessment models using:
 
 ```bash
@@ -89,6 +92,21 @@ Options:
 - `--models-dir`: Directory for saving models (default: models)
 
 Models will be saved to the `models/` directory.
+
+### Model Results
+
+Below are the accuracy results from training different models:
+
+| Exercise Type | Model Type | Accuracy | Notes |
+|---------------|------------|----------|-------|
+| Bicep Curl | PyTorch Neural Network | 100.00% | Loss: 0.0261 after 50 epochs |
+| Bicep Curl | Random Forest | 100.00% | Perfect precision/recall for all classes |
+| Pushup | PyTorch Neural Network | 99.13% | Loss: 0.0240 after 50 epochs |
+| Pushup | Random Forest | 100.00% | Perfect precision/recall for all classes |
+| Squat | PyTorch Neural Network | 43.48% | Loss: 0.9960 after 50 epochs |
+| Squat | Random Forest | 24.35% | Low precision/recall across all classes |
+
+> **Note on Squat Models**: The lower accuracy for squat models suggests that more high-quality training data may be needed, or that the current feature set doesn't adequately capture the complexity of squat form variations. Consider collecting more diverse data or adding additional sensors for better results.
 
 ## Running the Fitness Coach
 
@@ -117,6 +135,28 @@ Press Ctrl+C to return to the menu or exit the application.
 - `models/`: Directory for storing trained models and the MoveNet model
 - `collected_data/`: Directory for storing collected exercise data
 
+## Future Work
+
+The current system provides a prototype for exercise analysis, but several enhancements could further improve its capabilities:
+
+1. Improved Models Performance:
+
+    - Collect more diverse data across different body types and skill levels
+    - Experiment with different feature engineering approaches
+    - Try more complex models like CNNs or transformers for time-series data
+
+
+2. Extended Exercise Library:
+
+    - Add support for additional exercises (deadlifts, lunges, shoulder press, etc.)
+    - Create compound exercise workflows for circuit training
+
+
+3. Hardware Improvements:
+
+    - Add multiple sensors for better movement tracking
+    - Use camera holder for better detection
+
 ## Troubleshooting
 
 - **Hardware error**:
@@ -129,3 +169,4 @@ Press Ctrl+C to return to the menu or exit the application.
 ## License
 
 MIT License – see the LICENSE file for full details.
+
