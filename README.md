@@ -1,39 +1,38 @@
 # Personalized Fitness Coach
 
-A Raspberry Pi-based system that collects fitness data using a camera and MPU6050 sensor, evaluates exercise form using machine learning models, and provides real-time feedback on an LCD display.
+A Raspberry Pi-based system that tracks and evaluates exercise form using computer vision and motion sensors, providing real-time feedback through an LCD display and LED indicators.
 
----
+## Project Overview
 
-## Project Features
+This system combines pose detection (using MoveNet) with motion tracking (MPU6050 sensor) to:
+- Collect multi-modal exercise data (visual pose + motion)
+- Train machine learning models for form quality assessment
+- Provide real-time feedback during workouts
+- Support multiple exercise types (squats, pushups, bicep curls)
 
-- Pose estimation with the MoveNet TFLite model
-- Motion tracking using MPU6050 (accelerometer + gyroscope)
-- Form quality classification using PyTorch or Random Forest models
-- CLI interface for interaction and feedback
-- LCD output for real-time guidance and feedback
+## Hardware Requirements
 
----
-
-## Requirements
-
-### Hardware
 - Raspberry Pi 4
-- Raspberry Pi Camera
-- MPU6050 sensor (I2C address: `0x53`)
+- Raspberry Pi Camera Module
+- MPU6050 accelerometer/gyroscope sensor (I2C address: `0x53`)
 - I2C LCD display (I2C address: `0x27`)
-- Jumper wires, breadboard
+- 3 LEDs for feedback:
+  - Blue LED (GPIO 16): Good form
+  - Green LED (GPIO 20): Moderate form
+  - Yellow LED (GPIO 21): Poor form
+- Breadboard and jumper wires
 
-### Software
-- Python 3
-- tflite-runtime
-- OpenCV
-- PyTorch
-- scikit-learn
-- pandas, numpy
-- RPLCD
-- Picamera2
+## Software Dependencies
 
----
+- Python==3.10
+- tflite-runtime (for MoveNet model)
+- OpenCV (for image processing)
+- PyTorch (for neural network models)
+- scikit-learn (for RandomForest models)
+- pandas, numpy (for data processing)
+- RPLCD (for LCD control)
+- Picamera2 (for camera access)
+- RPi.GPIO (for LED control)
 
 ## Installation
 
@@ -45,76 +44,88 @@ A Raspberry Pi-based system that collects fitness data using a camera and MPU605
 
 2. Install dependencies:
    ```bash
-   sudo apt update
-   sudo apt install python3-pip libatlas-base-dev libopenblas-dev
-   pip3 install numpy pandas torch torchvision opencv-python scikit-learn RPLCD smbus2 tflite-runtime
+   pip install -r requirements.txt
    ```
 
-3. Enable I2C and camera:
-   ```bash
-   sudo raspi-config
-   # Enable I2C under Interfacing Options
-   # Enable Camera under Interface Options
-   ```
-
-4. Download the MoveNet model:
-
-  - Place it in the models/ folder (e.g., models/movenet.tflite)
-  - Refer to: https://www.tensorflow.org/hub/tutorials/movenet
-
+3. Download the MoveNet TFLite model:
    ```bash
    mkdir -p models
    wget -O models/movenet.tflite https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite
-
    ```
 
----
+## Data Collection
 
-## Usage
+Use the `multi_collector.py` module to gather training data:
 
-### 1. Collect Training Data
-Run the data collector to gather pose and motion data:
 ```bash
-python3 multi_collector.py
+python run_multi_collector.py
 ```
-Follow prompts to select an exercise (e.g., squat, pushup, bicep curl) and begin collecting labeled session data.
 
-### 2. Train Model
-Train a classification model for form quality:
+This will:
+- Prompt you to select an exercise type
+- Collect user information (height, weight, experience level)
+- Record sensor data and camera frames
+- Save labeled data for model training
+
+The data is organized into:
+- `collected_data/pose_data/`: JSON files with pose keypoints
+- `collected_data/mpu_data/`: CSV files with accelerometer/gyroscope data
+- `collected_data/image_data/`: Captured images
+- `collected_data/labeled_data/`: Processed data ready for training
+
+## Model Training
+
+Train form quality assessment models using:
+
 ```bash
-python3 model_trainer.py --exercise pushup --model random_forest
-# or
-python3 model_trainer.py --exercise squat --model pytorch
+python model_trainer.py --exercise squat --model random_forest
 ```
-Trained models will be saved in the `models/` directory.
 
-### 3. Run Real-Time Feedback System
-Launch the CLI interface for real-time analysis:
+Options:
+- `--exercise`: Exercise type (squat, pushup, bicep_curl)
+- `--model`: Model type (random_forest, pytorch)
+- `--list-exercises`: List available exercises in the collected data
+- `--data-dir`: Directory for input data (default: collected_data)
+- `--models-dir`: Directory for saving models (default: models)
+
+Models will be saved to the `models/` directory.
+
+## Running the Fitness Coach
+
+Start the interactive fitness coach:
+
 ```bash
-python3 fitness_coach_cli.py
+python fitness_coach_cli.py
 ```
-LCD will guide you through the selected exercise and show whether your form is correct.
 
----
+This will:
+1. Present a menu to select exercise mode or auto-detection
+2. Monitor your movements in real-time
+3. Provide feedback through:
+   - LCD display showing exercise type and form quality
+   - LED indicators (Blue = Good, Green = Moderate, Yellow = Poor)
+   - Terminal output
+
+Press Ctrl+C to return to the menu or exit the application.
 
 ## Project Structure
 
-- `multi_collector.py` – Captures pose + sensor data for training
-- `model_trainer.py` – Trains classifiers (Random Forest / PyTorch)
-- `fitness_coach_cli.py` – Main app for real-time form analysis
-- `models/` – Contains TFLite pose model and trained classifiers
-- `collected_data/` – Stores labeled pose and sensor datasets
-
----
+- `data_collector.py`: Core class for data collection using camera and MPU6050
+- `run_data_collector.py`: Interactive script for collecting exercise data
+- `model_trainer.py`: Trains and evaluates form quality models
+- `fitness_coach_cli.py`: Main application with real-time feedback
+- `models/`: Directory for storing trained models and the MoveNet model
+- `collected_data/`: Directory for storing collected exercise data
 
 ## Troubleshooting
 
-- **LCD not working**: Ensure correct I2C address and wiring
-- **MPU6050 not detected**: Run `sudo i2cdetect -y 1` and verify it's at address `0x53`
-- **Hardware error**: Test with `python utils/test_hardware.py`
-- **Model loading fails**: Check file paths and naming in `fitness_coach_cli.py`
+- **Hardware error**:
+   - Test with `python utils/test_hardware.py`
 
----
+- **Model training errors**:
+  - Ensure sufficient data has been collected
+  - Check log files in `training_logs/` directory
 
 ## License
+
 MIT License – see the LICENSE file for full details.

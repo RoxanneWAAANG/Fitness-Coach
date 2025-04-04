@@ -3,6 +3,7 @@ import cv2
 import smbus
 import time
 import numpy as np
+import RPi.GPIO as GPIO
 from RPLCD.i2c import CharLCD
 from torchvision import transforms
 from picamera2 import Picamera2
@@ -33,11 +34,10 @@ model_paths = {
     "squat": "/home/ruoxinwang/aipi590/Fitness_Coach/Fitness-Coach/models/squat_pytorch_model.pt",
 }
 
-# Label mapping (as defined in model_trainer.py)
+# Label mapping
 label_mapping = {0: "good", 1: "moderate", 2: "poor"}
 
 for exercise, path in model_paths.items():
-    # Initialize with the expected input size for IMU data
     model = FormQualityModel(input_size=25)
     model.load_state_dict(torch.load(path))
     model.eval()
@@ -63,6 +63,24 @@ transform = transforms.Compose([
 # Initialize LCD
 lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=1, cols=16, rows=2, dotsize=8)
 
+# Initialize LEDs
+LED_PINS = {
+    "good": 16,      # Blue LED
+    "moderate": 20,  # Green LED
+    "poor": 21       # Yellow LED
+}
+
+GPIO.setmode(GPIO.BCM)
+for pin in LED_PINS.values():
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, GPIO.LOW)
+
+def indicate_form_quality(form_quality):
+    for pin in LED_PINS.values():
+        GPIO.output(pin, GPIO.LOW)
+    if form_quality in LED_PINS:
+        GPIO.output(LED_PINS[form_quality], GPIO.HIGH)
+
 def display_result(exercise, form_quality):
     lcd.clear()
     lcd.write_string(f"{exercise}\nForm: {form_quality}")
@@ -70,60 +88,38 @@ def display_result(exercise, form_quality):
 def predict_exercise(selected_model=None):
     imu_data = read_mpu6050()
     frame = capture_frame()
-    
+
     if selected_model:
-        # Use only the selected model
         model = models[selected_model]
         with torch.no_grad():
             imu_tensor = torch.tensor(imu_data, dtype=torch.float32).unsqueeze(0)
-            
-            # Pad if needed to match expected input size
             batch_size = imu_tensor.shape[0]
             if imu_tensor.shape[1] != 25:
                 padded = torch.zeros((batch_size, 25), dtype=torch.float32)
                 padded[:, :imu_tensor.shape[1]] = imu_tensor
                 imu_tensor = padded
-            
             output = model(imu_tensor)
-            # Get predicted class (0=good, 1=moderate, 2=poor)
             _, predicted_class = torch.max(output.data, 1)
             form_quality = label_mapping[predicted_class.item()]
-        
         return selected_model, form_quality
     else:
-        # Original behavior - try all models and pick the best
         predictions = {}
         form_qualities = {}
-        
         for exercise, model in models.items():
             with torch.no_grad():
-                # Reshape input to match expected size
                 imu_tensor = torch.tensor(imu_data, dtype=torch.float32).unsqueeze(0)
-                
-                # Pad if needed to match expected input size
                 batch_size = imu_tensor.shape[0]
                 if imu_tensor.shape[1] != 25:
                     padded = torch.zeros((batch_size, 25), dtype=torch.float32)
                     padded[:, :imu_tensor.shape[1]] = imu_tensor
                     imu_tensor = padded
-                
-                # Only pass the IMU tensor to the model
                 output = model(imu_tensor)
-                
-                # Get predicted class and confidence
                 probs = torch.nn.functional.softmax(output, dim=1).cpu().numpy()
-                
-                # Store the probability of "good" form (index 0) as our confidence
                 predictions[exercise] = probs[0][0]
-                
-                # Get the predicted form quality
                 _, predicted_class = torch.max(output.data, 1)
                 form_qualities[exercise] = label_mapping[predicted_class.item()]
-        
-        # Choose the exercise with highest confidence for "good" form
         best_exercise = max(predictions, key=lambda k: predictions[k])
         form_quality = form_qualities[best_exercise]
-        
         return best_exercise, form_quality
 
 def display_menu():
@@ -141,10 +137,10 @@ def run_fitness_coach():
     mpu6050_init()
     running = True
     selected_model = None
-    
+
     while running:
         choice = display_menu()
-        
+        time.sleep(5)
         if choice == '1':
             selected_model = "bicep_curl"
             print(f"Selected model: {selected_model}")
@@ -164,13 +160,14 @@ def run_fitness_coach():
         else:
             print("Invalid choice. Please try again.")
             continue
-        
+
         print("Starting exercise monitoring (press Ctrl+C to return to menu)...")
         try:
             while True:
                 exercise, form_quality = predict_exercise(selected_model)
                 print(f"Detected: {exercise} - Form quality: {form_quality}")
                 display_result(exercise, form_quality)
+                indicate_form_quality(form_quality)
                 time.sleep(1)
         except KeyboardInterrupt:
             print("\nReturning to menu...")
@@ -182,3 +179,4 @@ if __name__ == "__main__":
         print("\nExiting application...")
     finally:
         lcd.clear()
+        GPIO.cleanup()
